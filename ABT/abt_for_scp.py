@@ -15,33 +15,24 @@ import random
 ################################################################
 ################################################################
 def main(num, base_dir, dir_list):
-    # random shuffle shape list to variate the base image
     random.shuffle(dir_list) 
-    # take the first shape of the list as base image
     image_dir_base = f'{base_dir}/{dir_list[0]}/inst_img'
     base_image, base_mask = get_base_image_and_mask(image_dir_base)
-    # use the rest of the shapes as target images
     target_list = get_target_list(base_dir, dir_list[1:])
-    # apply the ABT
-    # take the shapes and translocate to the base image
     for target_image, target_mask in target_list:      
         abt_image, abt_mask = rand_shift_overlay(base_image, base_mask, 
                                                    target_image, target_mask)
         base_image = abt_image
         base_mask = abt_mask
-    # save the ABT image and mask
     abt_img_folder = 'abt_img_train/'
     abt_msk_folder = 'abt_msk_train/'
-    # creates a in form of: num-shapes (eg. 0000-SC1SC13LLSC3SC04HTTSC2N1SC4) 
     abt_img_name = create_abt_img_name(num, dir_list)
     save_abt_img(abt_img_folder, abt_msk_folder, abt_img_name, 
                  abt_image, abt_mask)
 
 
 def rand_shift_overlay(base_image, base_mask, target_image, target_mask, max_attempts=1000):
-    # random shifts until there's no overlap with base image
     for count in range(max_attempts):
-        # calculate possible random shift for masks
         shift_y, shift_x = random_shift(target_mask)
         shifted_mask = shift_msk(target_mask, shift_y, shift_x)
         abt_image, abt_mask = create_abt_image_and_mask(base_mask,
@@ -71,9 +62,7 @@ def rand_shift_overlay(base_image, base_mask, target_image, target_mask, max_att
 ### These helper functions are used in rand_shift_overlay    ###
 ################################################################
 def random_shift(target_mask):
-    # Find the positions of the mask
     mask_y, mask_x = np.where(target_mask > 0)
-    # Generate random shift
     shift_y = np.random.randint(-np.min(mask_y), target_mask.shape[0] - np.max(mask_y))
     shift_x = np.random.randint(-np.min(mask_x), target_mask.shape[1] - np.max(mask_x))
 
@@ -93,14 +82,10 @@ def check_overlap(base_mask, shifted_mask):
 
 def create_abt_image_and_mask(base_mask,base_image,target_image, 
                               target_mask, shifted_mask):
-    # Cut out the objects from the target image
     target_objects = target_image.copy()
     target_objects[target_mask == 0] = 0
-    # Create a copy of the base image to work on
     overlay_image = base_image.copy()
-    # Overlay the shifted objects onto the base image
     overlay_image[shifted_mask != 0] = target_objects[target_mask != 0]
-    # Create the overlay mask
     overlay_mask = np.where(shifted_mask != 0, shifted_mask, base_mask)
     return overlay_image, overlay_mask
 
@@ -120,14 +105,12 @@ def create_abt_img_name(num, dir_list):
     return new_name
 
 def save_abt_img(abt_img_folder, abt_msk_folder, abt_img_name, final_image, final_mask):
-    # Save the overlay image
     if not os.path.exists(abt_img_folder):
         os.makedirs(abt_img_folder)
     cv2.imwrite(abt_img_folder + abt_img_name + '.jpg', final_image)
 
     if not os.path.exists(abt_msk_folder):
         os.makedirs(abt_msk_folder)
-    # Save the overlay mask
     cv2.imwrite(abt_msk_folder + abt_img_name + '.png', final_mask)
 
 def get_base_image_and_mask(image_dir_base):
@@ -201,7 +184,6 @@ if __name__ == '__main__':
     # for this example code the dataset has to have 
     # the same structure as the example dataset (10S_raw_iabt)
     base_dir = 'path-to/10S_raw_iabt'
-    # number of abt images you want to create
     NUM_IMAGES = 5
     for i in range(NUM_IMAGES):
         main(i, base_dir, dir_list)
